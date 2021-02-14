@@ -92,7 +92,7 @@ class Downloader:
             output: str = Pipe(Settings().config['formats']['json']['output']).output(video.data)
             os.makedirs(os.path.dirname(output), exist_ok=True)
 
-            with open(output, 'w', encoding='utf-8') as file:
+            with open(output + ".tmp", 'w', encoding='utf-8') as file:
                 file.write("{\n")
                 file.write("\"video\": ")
                 file.write(json.dumps(video.data, indent=4))
@@ -123,8 +123,9 @@ class Downloader:
                                            end=video_duration.seconds,
                                            description='json')
                 file.seek(file.tell() - 2)
-                file.write("]\n")
+                file.write("\n]\n")
                 file.write("}\n")
+            os.rename(output + ".tmp", output)
             Logger().log(f'[json] {output}')
 
         # For each format (ignore json this time)
