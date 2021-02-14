@@ -98,6 +98,7 @@ class Downloader:
                 file.write(json.dumps(video.data, indent=4))
                 file.write(",\n")
                 file.write("\"comments\": [\n")
+                comment = None
                 for comment in video.comments:
                     # Skip unspecified users if a list is provided.
                     if Arguments().users and comment.commenter.name.lower() not in Arguments().users:
@@ -122,7 +123,8 @@ class Downloader:
                         self.draw_progress(current=comment.content_offset_seconds,
                                            end=video_duration.seconds,
                                            description='json')
-                file.seek(file.tell() - 2)
+                if comment:
+                    file.seek(file.tell() - 2)
                 file.write("\n]\n")
                 file.write("}\n")
             os.rename(output + ".tmp", output)
