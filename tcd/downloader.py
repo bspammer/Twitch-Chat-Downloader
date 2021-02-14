@@ -92,40 +92,39 @@ class Downloader:
             output: str = Pipe(Settings().config['formats']['json']['output']).output(video.data)
             os.makedirs(os.path.dirname(output), exist_ok=True)
 
-            data: dict = {
-                'video': video.data,
-                'comments': []
-            }
-
-            for comment in video.comments:
-
-                # Skip unspecified users if a list is provided.
-                if Arguments().users and comment.commenter.name.lower() not in Arguments().users:
-                    continue
-
-                # If specified, only include messages that include a specified string
-                if Arguments().includes and Arguments().includes not in comment.message.body.lower():
-                    continue
-
-                # Add comment to dictionary
-                data['comments'].append(comment.data)
-
-                # Ignore comments that were posted after the VOD finished
-                if Settings().config['formats']['json'].get('comments', {}).get('ignore_new_comments', False):
-                    comment_date = dateutil.parser.parse(comment.created_at)
-                    vod_finish_date = dateutil.parser.parse(video.created_at) + video_duration
-
-                    if comment_date > vod_finish_date:
+            with open(output, 'w', encoding='utf-8') as file:
+                file.write("{\n")
+                file.write("\"video\": ")
+                file.write(json.dumps(video.data, indent=4))
+                file.write(",\n")
+                file.write("\"comments\": [\n")
+                for comment in video.comments:
+                    # Skip unspecified users if a list is provided.
+                    if Arguments().users and comment.commenter.name.lower() not in Arguments().users:
                         continue
 
-                if Logger().should_print_type(Log.PROGRESS):
-                    self.draw_progress(current=comment.content_offset_seconds,
-                                       end=video_duration.seconds,
-                                       description='json')
+                    # If specified, only include messages that include a specified string
+                    if Arguments().includes and Arguments().includes not in comment.message.body.lower():
+                        continue
 
-            with open(output, 'w', encoding='utf-8') as file:
-                json.dump(data, file, indent=4, sort_keys=True)
+                    file.write(json.dumps(comment.data, indent=4))
+                    file.write(",\n")
 
+                    # Ignore comments that were posted after the VOD finished
+                    if Settings().config['formats']['json'].get('comments', {}).get('ignore_new_comments', False):
+                        comment_date = dateutil.parser.parse(comment.created_at)
+                        vod_finish_date = dateutil.parser.parse(video.created_at) + video_duration
+
+                        if comment_date > vod_finish_date:
+                            continue
+
+                    if Logger().should_print_type(Log.PROGRESS):
+                        self.draw_progress(current=comment.content_offset_seconds,
+                                           end=video_duration.seconds,
+                                           description='json')
+                file.seek(file.tell() - 2)
+                file.write("]\n")
+                file.write("}\n")
             Logger().log(f'[json] {output}')
 
         # For each format (ignore json this time)
